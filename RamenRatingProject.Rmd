@@ -1,0 +1,163 @@
+---
+title: "International Ramen Rankings"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(viridis)
+library(hrbrthemes)
+```
+
+## Contents  
+1. Research Question
+2. Data Source
+3. Data Processing
+   + Define Data
+   + Select Table Columns
+   + Arrange Data
+4. Data Transformation
+   + Generate Mean Rating Scores
+   + Combine Separate Mean Tables 
+5. Data Visualisation 
+   + Initial Plot
+   + Final Plot
+6. Summary
+7. Reflection
+8. Resources  
+
+## Research Question
+* The instant ramen noodle market is a multi-billion dollar industry that has shown a huge increase in value from 2016-2022. Exports from leading country providers such as South Korea have increased by 26% in 2020 alone. The current market projections estimate this markets value will increase from 44 billion dollars to 77 billion dollars over the next 6 years.
+* The aim of this analysis was to generate a visualization of the most popular styles of instant ramen across countries in 2020. In the hopes that this visualisation may be used in business models to inform the potential success of marketing ramen varieties internationally.
+* The instant Ramen styles are: Cup, Bowl, and Packet (shown in Fig.1, left to right).  
+
+Fig:1 ![](U://DataVisualisation//Project_Repository//RamenRatingProject//Figures//RamenPicture.jpeg)
+
+## Data Source  
+* I used an open source data set found on the [Kaggle website.](https://www.kaggle.com/code/sujan97/complete-analysis-of-ramen-ratings/data)
+* The initial dataset documented the ratings out of 5 for: variety, brand and style of ramen for each country. 
+
+  
+```{r dataimport}
+#This data set was then loaded into R Studio.
+Ramen <- read.csv(here("data", "RamenRatings.csv"))
+```
+
+## Data Processing 
+Several processing steps were then conducted in order to prepare the data for the appropriate analysis.  
+
+#### Filter and Define Data
+* The Ramen data set was filtered in order to extract the three Style conditions of interest (Bowl, Cup and Packet). Creating 3 Separate tibbles grouped by these conditions.
+```{r warning=FALSE, message=FALSE}
+BowlData <- filter(Ramen, Style == "Bowl")
+CupData <- filter(Ramen, Style == "Cup")
+PackData <- filter(Ramen, Style == "Pack")
+```
+
+#### Select Table Columns 
+* After the filtering i could then select the columns required for the analysis (Country, Style and Star Rating) and disregard the excess.
+```{r warning=FALSE, message=FALSE}
+BowlData <- select(BowlData, Stars, Country)
+CupData <- select(CupData, Stars, Country)
+PackData <- select(PackData, Stars, Country)
+```
+#### Arrange Data  
+* These data sets were then arranged by country alphabetically in order to make it easier to determine missing responses and for neatness in the later visualisation. 
+```{r warning=FALSE, message=FALSE}
+BowlData <- arrange(BowlData, Country)
+CupData <- arrange(CupData, Country)
+PackData <- arrange(PackData, Country)
+```
+
+* The new data sets are easier to interpret now but transformations are required in order to conduct the analysis.  
+
+## Data Transformations  
+#### Generate Mean Rating Scores
+* In order to compare the ratings of each style of ramen Mean scores for each variety and brand of the style based on country. For instance you can see in the previous PackData table that Australia has 5 separate ratings. These were averaged into one score for each country via the group and summarise functions.
+```{r warning=FALSE, message=FALSE}
+BowlDataMe <- BowlData %>%
+  group_by(Country) %>%
+  summarise_at(vars(Stars), list(Stars = mean))
+BowlDataMe$Style <- "Bowl"
+CupDataMe <- CupData %>%
+  group_by(Country) %>%
+  summarise_at(vars(Stars), list(Stars = mean))
+CupDataMe$Style <- "Cup"
+PackDataMe <- PackData %>%
+  group_by(Country) %>%
+  summarise_at(vars(Stars), list(Stars = mean))
+PackDataMe$Style <- "Pack"
+```
+
+#### Combine Separate Mean Tables
+* The 3 meaned data sets were then combined in order to be used in the visualisation. This was achieved using the full join function.
+```{r warning=FALSE, message=FALSE}
+MeanTibbleGrouped <- BowlDataMe %>% full_join(CupDataMe,by=c("Country","Stars", "Style"))
+
+MeanTibbleGrouped <- MeanTibbleGrouped %>% full_join(PackDataMe,by=c("Country","Stars","Style"))
+MeanTibbleGrouped
+```
+
+#### Combine Separate Mean Tables
+* The 3 meaned data sets were then combined in order to be used in the visualisation. This was achieved using the full join function.
+```{r warning=FALSE, message=FALSE}
+MeanTibbleGrouped <- BowlDataMe %>% full_join(CupDataMe,by=c("Country","Stars", "Style"))
+
+MeanTibbleGrouped <- MeanTibbleGrouped %>% full_join(PackDataMe,by=c("Country","Stars","Style"))
+MeanTibbleGrouped
+```  
+
+## Data Visualisation
+* Now the data has been processed and transformed into more usable variables it is time to visualise it. This was achieved utilising the ggplot function.
+
+#### Initial Plot
+* The initial plot i utlised was a grouped bar graph aiming to represent the Country (x-axis), the style of ramen (group fill), and their respective star ratings (y-axis.) 
+```{r warning=FALSE, message=FALSE}
+InitialPlot <- ggplot(MeanTibbleGrouped, aes(fill=Style, y=Stars, x=Country)) + 
+    geom_bar(position="dodge", stat="identity")
+```  
+```{r fig1, fig.height = 8, fig.width = 12, warning=FALSE, message=FALSE}
+library(knitr)
+plot(InitialPlot)
+```  
+
+* As you can see this visualisation was less than ideal as there are far too many countries along the x-axis to provide a clear representation. 
+
+#### Final Plot  
+* I chose to utilise subplots in order to better represent the individual country ratings. This was achieved by changing the axes. Now having Style (x-axis), Star rating (y-axis); and splitting the plots by country. A header was generated via the ggplot Tile function. The plot separation was made possible by using the facet_wrap function.  
+
+```{r warning=FALSE, message=FALSE}
+FinalPlot <- ggplot(MeanTibbleGrouped, aes(fill=Country, y=Stars, x=Style)) + 
+    geom_bar(position="dodge", stat="identity") +
+    scale_fill_viridis(discrete = T, option = "E") +
+    ggtitle("Ramen Style Ratings Across Countries") +
+    facet_wrap(~Country) +
+    theme_ipsum() +
+    theme(legend.position="none") +
+    xlab("")
+``` 
+```{r fig2, fig.height = 10, fig.width = 14, warning=FALSE, message=FALSE}
+plot(FinalPlot)
+```  
+
+## Summary
+* It can be seen from the split plots that on average packet style ramen is almost universally ranked as the best style of ramen. Securing the highest ranking from 23 countries.
+* Bowl and cup style ramen are tied for second place securing an averaged top ranking from 6 countries each. 
+* However, when the countries are grouped via geographical region we can see trends in style preference emerge.
+   + Packet style is preferred in: European, Oceanic, West African, West Asian and South Asian Countries.
+   + Bowl Style is preferred in: East Asian and South-East Asian countries.
+   + Cup Style is preferred in: South American countries.  
+
+## Reflection  
+* There are limitations to the inferences that can be drawn from this visualization. The data set shows a number of missing cases in regards to many countries style rankings. For Instance Nepal shows a ranking of 0 for both bowl and cup styles. It is unexplained in the data set whether this is actually representative of a rank score of 0. This could in fact be due to a failing in data collection, or perhaps an inaccessibility of certain styles in Nepal's general market. Further data collection should be conducted for the countries showing these deficits to determine whether this is a preferential deficit or a possible gap in the market.
+* Given more time for the analysis i would have liked to adapt my visualisation into a more efficient representation such as a circular bar graph grouped by geographical region to make my summary inferences more easily inferable. However given the time restraints i was unable to do so. 
+
+
+## Resources  
+* Complete analysis of Ramen Ratings. (2022). Retrieved 16 May 2022, from https://www.kaggle.com/code/sujan97/complete-analysis-of-ramen-ratings/data
+
+* The Instant Ramen Boom Is Now Worth Tens of Billions of Dollars. (2022). Retrieved 16 May 2022, from https://marker.medium.com/the-instant-ramen-boom-is-now-worth-tens-of-billions-of-dollars-89a5466620bc
+
+* World Map / World Atlas / Atlas of the World Including Geography Facts and Flags - WorldAtlas.com. (2022). Retrieved 16 May 2022, from https://www.worldatlas.com/
